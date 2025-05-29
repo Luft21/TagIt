@@ -1,0 +1,34 @@
+import 'package:flutter/material.dart';
+
+class NavbarView extends StatelessWidget {
+  final int selectedIndex;
+  final Function(int) onTap;
+
+  const NavbarView({
+    Key? key,
+    required this.selectedIndex,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomNavigationBar(
+      currentIndex: selectedIndex,
+      onTap: onTap,
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.map),
+          label: 'Map',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.add_box_outlined),
+          label: 'Kontribusi',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.bookmark_border),
+          label: 'Disimpan',
+        ),
+      ],
+    );
+  }
+}
