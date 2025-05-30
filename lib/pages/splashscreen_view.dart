@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'home_view.dart'; 
+import 'welcome_view.dart'; 
 
 class SplashScreenView extends StatefulWidget {
   const SplashScreenView({Key? key}) : super(key: key);
@@ -16,7 +16,7 @@ class _SplashScreenViewState extends State<SplashScreenView> {
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeView()),
+        MaterialPageRoute(builder: (_) => const WelcomeView()),
       );
     });
   }
