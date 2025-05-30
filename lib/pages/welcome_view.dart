@@ -69,7 +69,7 @@ class _WelcomeViewState extends State<WelcomeView> {
     return Scaffold(
       backgroundColor: const Color(
         0xFFD0EDF5,
-      ), // Sesuaikan dengan warna latar belakang aplikasi Anda
+      ),
       body: Stack(
         children: [
           PageView.builder(
@@ -90,7 +90,7 @@ class _WelcomeViewState extends State<WelcomeView> {
                   children: [
                     Image.asset(
                       page.imagePath,
-                      width: 250, // Ukuran ilustrasi
+                      width: 250,
                       height: 250,
                     ),
                     const SizedBox(height: 10),
@@ -148,7 +148,7 @@ class _WelcomeViewState extends State<WelcomeView> {
                     ? Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Tombol Lewati
+                        // Button Lewati
                         TextButton(
                           onPressed: _navigateToHome,
                           child: Text(
@@ -159,7 +159,7 @@ class _WelcomeViewState extends State<WelcomeView> {
                             ),
                           ),
                         ),
-                        // Tombol Lanjut
+                        // Button Lanjut
                         ElevatedButton(
                           onPressed: () {
                             _pageController.nextPage(
@@ -194,7 +194,7 @@ class _WelcomeViewState extends State<WelcomeView> {
                       children: [
                         ElevatedButton(
                           onPressed:
-                              _onLoginPressed, // Navigasi ke halaman Login
+                              _onLoginPressed,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(
                               0xFF87AFFF,
@@ -206,7 +206,7 @@ class _WelcomeViewState extends State<WelcomeView> {
                             minimumSize: const Size(
                               double.infinity,
                               50,
-                            ), // Lebar penuh
+                            ),
                             elevation: 5,
                           ),
                           child: Text(
