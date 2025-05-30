@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home_view.dart';
+import 'home_screen.dart';
 
 class OnboardingPageContent {
   final String imagePath;
@@ -14,14 +14,14 @@ class OnboardingPageContent {
   });
 }
 
-class WelcomeView extends StatefulWidget {
-  const WelcomeView({super.key});
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
 
   @override
-  State<WelcomeView> createState() => _WelcomeViewState();
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeViewState extends State<WelcomeView> {
+class _WelcomeScreenState extends State<WelcomeScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -56,7 +56,7 @@ class _WelcomeViewState extends State<WelcomeView> {
   void _navigateToHome() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const HomeView()),
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
     );
   }
 

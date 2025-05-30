@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tag_it/screens/welcome_screen.dart';
 import 'dart:async';
 import 'home_screen.dart'; 
 
@@ -16,7 +17,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeView()),
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
       );
     });
   }
