@@ -116,7 +116,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               );
             },
           ),
-          // Bagian bawah untuk indikator dan tombol navigasi
           Positioned(
             bottom: 40,
             left: 24,
@@ -142,12 +141,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   }),
                 ),
                 const SizedBox(height: 10),
-                // Tombol Navigasi
+                // Button navigasi
                 _currentPage < onboardingPages.length - 1
                     ? Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Button Lewati
                         TextButton(
                           onPressed:
                               _navigateToHome, // Menggunakan _navigateToHome
@@ -159,7 +157,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ),
                           ),
                         ),
-                        // Button Lanjut
                         ElevatedButton(
                           onPressed: () {
                             _pageController.nextPage(
