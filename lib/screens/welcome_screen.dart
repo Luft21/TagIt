@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home_screen.dart';
+import 'login_screen.dart';
 
 class OnboardingPageContent {
   final String imagePath;
@@ -25,7 +25,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // Data untuk setiap halaman onboarding
   final List<OnboardingPageContent> onboardingPages = [
     OnboardingPageContent(
       imagePath: 'assets/images/board2.png',
@@ -53,15 +52,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.dispose();
   }
 
-  void _navigateToHome() {
+  void _navigateToLogin() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
   void _onLoginPressed() {
-    _navigateToHome(); // Sementara, navigasi ke Home
+    _navigateToLogin();
   }
 
   @override
@@ -117,7 +116,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               );
             },
           ),
-          // Bagian bawah untuk indikator dan tombol navigasi
           Positioned(
             bottom: 40,
             left: 24,
@@ -143,14 +141,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   }),
                 ),
                 const SizedBox(height: 10),
-                // Tombol Navigasi
+                // Button navigasi
                 _currentPage < onboardingPages.length - 1
                     ? Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Button Lewati
                         TextButton(
-                          onPressed: _navigateToHome,
+                          onPressed: _navigateToLogin,
                           child: Text(
                             'Lewati',
                             style: GoogleFonts.poppins(
@@ -159,7 +156,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ),
                           ),
                         ),
-                        // Button Lanjut
                         ElevatedButton(
                           onPressed: () {
                             _pageController.nextPage(
@@ -189,7 +185,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         ),
                       ],
                     )
-                    : // Tombol di halaman terakhir (Log In & Create Account)
+                    :
                     Column(
                       children: [
                         ElevatedButton(
@@ -198,7 +194,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(
                               0xFF87AFFF,
-                            ), // Warna utama
+                            ),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),

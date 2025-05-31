@@ -61,6 +61,8 @@ dev_dependencies:
 flutter:
   assets:
     - assets/images/tagit_logo.png
+    - assets/images/tagit_login.png
+    - assets/images/google_logo.png
     - assets/images/board1.png
     - assets/images/board2.png
     - assets/images/board3.png
