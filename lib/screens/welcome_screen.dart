@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:tag_it/providers/auth_provider.dart';
 import 'home_screen.dart';
 
 class OnboardingPageContent {
@@ -25,7 +27,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // Data untuk setiap halaman onboarding
+  // Data untuk setiap halaman onboarding Anda
   final List<OnboardingPageContent> onboardingPages = [
     OnboardingPageContent(
       imagePath: 'assets/images/board2.png',
@@ -53,23 +55,24 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.dispose();
   }
 
-  void _navigateToHome() {
+  void _navigateToHome() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.markOnboardingComplete();
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const HomeScreen()),
     );
   }
 
-  void _onLoginPressed() {
-    _navigateToHome(); // Sementara, navigasi ke Home
+  void _onDoneOrLoginPressed() {
+    _navigateToHome();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFD0EDF5,
-      ),
+      backgroundColor: const Color(0xFFD0EDF5),
       body: Stack(
         children: [
           PageView.builder(
@@ -88,11 +91,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      page.imagePath,
-                      width: 250,
-                      height: 250,
-                    ),
+                    Image.asset(page.imagePath, width: 250, height: 250),
                     const SizedBox(height: 10),
                     Text(
                       page.title,
@@ -135,8 +134,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       decoration: BoxDecoration(
                         color:
                             _currentPage == index
-                                ? const Color(0xFF87AFFF)
-                                : Colors.grey.shade400,
+                                ? const Color(0xFF87AFFF) // Warna aktif
+                                : Colors.grey.shade400, // Warna tidak aktif
                         borderRadius: BorderRadius.circular(8),
                       ),
                     );
@@ -150,7 +149,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       children: [
                         // Button Lewati
                         TextButton(
-                          onPressed: _navigateToHome,
+                          onPressed:
+                              _navigateToHome, // Menggunakan _navigateToHome
                           child: Text(
                             'Lewati',
                             style: GoogleFonts.poppins(
@@ -189,16 +189,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         ),
                       ],
                     )
-                    : // Tombol di halaman terakhir (Log In & Create Account)
-                    Column(
+                    : Column(
                       children: [
                         ElevatedButton(
-                          onPressed:
-                              _onLoginPressed,
+                          onPressed: _onDoneOrLoginPressed,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(
-                              0xFF87AFFF,
-                            ), // Warna utama
+                            backgroundColor: const Color(0xFF87AFFF),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
@@ -206,11 +202,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             minimumSize: const Size(
                               double.infinity,
                               50,
-                            ),
+                            ), // Lebar penuh
                             elevation: 5,
                           ),
                           child: Text(
-                            'Log In',
+                            'Mulai Aplikasi',
                             style: GoogleFonts.poppins(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,

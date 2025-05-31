@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart' as places_sdk;
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
+    as places_sdk;
 import 'package:geolocator/geolocator.dart';
+import 'package:tag_it/screens/profile_screen.dart';
 import '../widgets/navbar_view.dart';
 
 const kGoogleApiKey = 'AIzaSyDvbiq-Uwemy8QMtkLvtuheSxCqkq1xZ-U';
@@ -24,11 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _selectedIndex = 0;
 
-  void _onNavTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  late final List<Widget> _pages;
 
   @override
   void initState() {
@@ -36,6 +34,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _places = places_sdk.FlutterGooglePlacesSdk(kGoogleApiKey);
     _initLocation();
     _searchController.addListener(_onSearchChanged);
+
+    _pages = [
+      // HOME PAGE
+      _buildMapContent(),
+      // PAGE KONTRIBUSI
+      const Center(child: Text('Ini adalah Halaman Kontribusi')),
+      // SAVED PAGE
+      const Center(child: Text('Ini adalah Halaman Disimpan')),
+      // PROFILE PAGE
+      const ProfileScreen(),
+    ];
   }
 
   @override
@@ -76,7 +85,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _onSelectPrediction(places_sdk.AutocompletePrediction prediction) async {
+  Future<void> _onSelectPrediction(
+    places_sdk.AutocompletePrediction prediction,
+  ) async {
     final placeId = prediction.placeId;
 
     final details = await _places.fetchPlace(
@@ -88,9 +99,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final lng = details.place?.latLng?.lng;
     if (lat != null && lng != null) {
       final newPos = LatLng(lat, lng);
-      _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: newPos, zoom: 15),
-      ));
+      _mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: newPos, zoom: 15),
+        ),
+      );
       _searchController.removeListener(_onSearchChanged);
       setState(() {
         _searchController.text = prediction.fullText;
@@ -100,51 +113,50 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMapContent() {
     if (_currentPosition == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _currentPosition!,
-              zoom: 15,
-            ),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            onMapCreated: (controller) {
-              _mapController = controller;
-            },
+    return Stack(
+      children: [
+        GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: _currentPosition!,
+            zoom: 15,
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 8),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Cari lokasi...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
+          myLocationEnabled: true,
+          myLocationButtonEnabled: true,
+          onMapCreated: (controller) {
+            _mapController = controller;
+          },
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 8),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Cari lokasi...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 20,
+                      ),
+                      suffixIcon:
+                          _searchController.text.isNotEmpty
+                              ? IconButton(
                                 icon: const Icon(Icons.clear),
                                 onPressed: () {
                                   _searchController.clear();
@@ -153,47 +165,76 @@ class _HomeScreenState extends State<HomeScreen> {
                                   });
                                 },
                               )
-                            : null,
+                              : null,
+                    ),
+                  ),
+                ),
+                if (_predictions.isNotEmpty)
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black12, blurRadius: 8),
+                        ],
+                      ),
+                      child: ListView.builder(
+                        itemCount: _predictions.length,
+                        itemBuilder: (context, index) {
+                          final pred = _predictions[index];
+                          return ListTile(
+                            leading: const Icon(Icons.location_on),
+                            title: Text(pred.fullText),
+                            onTap: () => _onSelectPrediction(pred),
+                          );
+                        },
                       ),
                     ),
                   ),
-                  if (_predictions.isNotEmpty)
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                            )
-                          ],
-                        ),
-                        child: ListView.builder(
-                          itemCount: _predictions.length,
-                          itemBuilder: (context, index) {
-                            final pred = _predictions[index];
-                            return ListTile(
-                              leading: const Icon(Icons.location_on),
-                              title: Text(pred.fullText),
-                              onTap: () => _onSelectPrediction(pred),
-                            );
-                          },
-                        ),
-                      ),
-                    )
-                ],
-              ),
+              ],
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _selectedIndex == 0
+              ? 'Peta TagIt'
+              : _selectedIndex == 1
+              ? 'Kontribusi'
+              : _selectedIndex == 2
+              ? 'Disimpan'
+              : 'Profil',
+        ),
       ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavbarView(
         selectedIndex: _selectedIndex,
-        onTap: _onNavTapped,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
+
+      floatingActionButton:
+          _selectedIndex == 0
+              ? FloatingActionButton(
+                onPressed: () {
+                  print('Menandai tempat di: $_currentPosition');
+                },
+                child: const Icon(Icons.add_location_alt),
+              )
+              : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
