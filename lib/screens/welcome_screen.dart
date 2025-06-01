@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:tag_it/providers/auth_provider.dart';
-import 'home_screen.dart';
+import 'MainNavigationScreen.dart';
 
 class OnboardingPageContent {
   final String imagePath;
@@ -61,7 +61,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
     );
   }
 
