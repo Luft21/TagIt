@@ -9,77 +9,91 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Login ke TagIt App'),
         centerTitle: true,
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Selamat Datang di TagIt App!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final user = await authProvider.signInWithGoogle();
-
-                if (user != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Selamat datang, ${user.displayName}!'),
-                    ),
-                  );
-
-                  if (authProvider.isNewUser) {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => const WelcomeScreen(),
-                      ),
-                    );
-                  } else {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
-                      ),
-                    );
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Login dibatalkan atau gagal.'),
-                    ),
-                  );
-                }
-              },
-              icon: Image.asset('assets/images/google-logo.png', height: 24.0),
-              label: const Text(
-                'Masuk dengan Google',
-                style: TextStyle(fontSize: 18),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Selamat Datang di TagIt App!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blueAccent),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black87,
-                side: const BorderSide(color: Colors.grey),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 15,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 3,
-              ),
-            ),
+              const SizedBox(height: 50),
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  return Column(
+                    children: [
+                      if (authProvider.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 20.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      if (authProvider.errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20.0),
+                          child: Text(
+                            authProvider.errorMessage!,
+                            style: const TextStyle(color: Colors.red, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ElevatedButton.icon(
+                        onPressed: authProvider.isLoading
+                            ? null
+                            : () async {
+                                final user = await authProvider.signInWithGoogle();
 
-            // Kalo mau nambah login dibawah sini guys
-          ],
+                                if (user != null) {
+                                  if (authProvider.isNewUser) {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => const WelcomeScreen(),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => const HomeScreen(),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: Image.asset(
+                          'assets/images/google-logo.png',
+                          height: 24.0,
+                        ),
+                        label: const Text(
+                          'Masuk dengan Google',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black87,
+                          side: const BorderSide(color: Colors.grey, width: 1.0),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 5,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
