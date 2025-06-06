@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:tag_it/providers/auth_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tag_it/services/auth_service.dart';
 import 'package:tag_it/screens/login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -8,8 +8,8 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final currentUser = authProvider.user;
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     if (currentUser == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -23,28 +23,26 @@ class ProfileScreen extends StatelessWidget {
           CircleAvatar(
             radius: 60,
             backgroundColor: Colors.grey.shade200,
-            backgroundImage:
-                currentUser.photoURL != null
-                    ? NetworkImage(currentUser.photoURL!)
-                    : null,
-            child:
-                currentUser.photoURL == null && currentUser.displayName != null
+            backgroundImage: currentUser.photoURL != null
+                ? NetworkImage(currentUser.photoURL!)
+                : null,
+            child: currentUser.photoURL == null && currentUser.displayName != null
+                ? Text(
+                    currentUser.displayName![0].toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 48,
+                      color: Colors.blueGrey,
+                    ),
+                  )
+                : (currentUser.photoURL == null && currentUser.email != null
                     ? Text(
-                      currentUser.displayName![0].toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 48,
-                        color: Colors.blueGrey,
-                      ),
-                    )
-                    : (currentUser.photoURL == null && currentUser.email != null
-                        ? Text(
-                          currentUser.email![0].toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 48,
-                            color: Colors.blueGrey,
-                          ),
-                        )
-                        : null),
+                        currentUser.email![0].toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 48,
+                          color: Colors.blueGrey,
+                        ),
+                      )
+                    : null),
           ),
           const SizedBox(height: 20),
           Text(
@@ -88,7 +86,7 @@ class ProfileScreen extends StatelessWidget {
                 );
 
                 if (confirmLogout == true) {
-                  await authProvider.signOut();
+                  await AuthService().signOut();
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
                       builder: (context) => const LoginScreen(),

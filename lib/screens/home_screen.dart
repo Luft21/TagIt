@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart' as places_sdk;
 import 'package:geolocator/geolocator.dart';
-// import '../widgets/navbar_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tag_it/models/reminder_model.dart';
 
 const kGoogleApiKey = 'AIzaSyDvbiq-Uwemy8QMtkLvtuheSxCqkq1xZ-U';
 
@@ -21,14 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<places_sdk.AutocompletePrediction> _predictions = [];
   Timer? _debounce;
-
-  int _selectedIndex = 0;
-
-  void _onNavTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  Set<Marker> _reminderMarkers = {};
 
   @override
   void initState() {
@@ -36,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _places = places_sdk.FlutterGooglePlacesSdk(kGoogleApiKey);
     _initLocation();
     _searchController.addListener(_onSearchChanged);
+    _loadReminders();
   }
 
   @override
@@ -45,6 +41,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchController.dispose();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadReminders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final snapshot = await FirebaseFirestore.instance
+        .collection('reminders')
+        .where('userId', isEqualTo: user.uid)
+        .where('isActive', isEqualTo: true)
+        .get();
+
+    final markers = snapshot.docs.map((doc) {
+      final data = doc.data();
+      return Marker(
+        markerId: MarkerId(doc.id),
+        position: LatLng(data['latitude'], data['longitude']),
+        infoWindow: InfoWindow(title: data['name']),
+      );
+    }).toSet();
+
+    setState(() {
+      _reminderMarkers = markers;
+    });
   }
 
   Future<void> _initLocation() async {
@@ -59,6 +78,72 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _currentPosition = LatLng(position.latitude, position.longitude);
     });
+  }
+
+  void _showAddReminderModal(LatLng position) {
+    final TextEditingController _titleController = TextEditingController();
+    final TextEditingController _radiusController = TextEditingController(text: '100');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Tambah Pengingat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              TextField(
+                controller: _titleController,
+                decoration: InputDecoration(labelText: 'Judul Pengingat'),
+              ),
+              TextField(
+                controller: _radiusController,
+                decoration: InputDecoration(labelText: 'Radius (meter)'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user == null) return;
+                  final reminder = ReminderModel(
+                    userId: user.uid,
+                    name: _titleController.text,
+                    latitude: position.latitude,
+                    longitude: position.longitude,
+                    triggerRadius: double.tryParse(_radiusController.text) ?? 100,
+                    isActive: true,
+                  );
+                  await FirebaseFirestore.instance.collection('reminders').add({
+                    'userId': reminder.userId,
+                    'name': reminder.name,
+                    'latitude': reminder.latitude,
+                    'longitude': reminder.longitude,
+                    'triggerRadius': reminder.triggerRadius,
+                    'isActive': reminder.isActive,
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Pengingat berhasil disimpan!')),
+                  );
+                  _loadReminders(); // refresh marker
+                },
+                child: const Text('Simpan'),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _onSearchChanged() {
@@ -118,8 +203,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
+            markers: _reminderMarkers,
             onMapCreated: (controller) {
               _mapController = controller;
+            },
+            onLongPress: (LatLng tappedPosition) {
+              _showAddReminderModal(tappedPosition);
             },
           ),
           SafeArea(
@@ -190,10 +279,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      // bottomNavigationBar: NavbarView(
-      //   selectedIndex: _selectedIndex,
-      //   onTap: _onNavTapped,
-      // ),
     );
   }
 }

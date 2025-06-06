@@ -1,9 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:tag_it/providers/auth_provider.dart';
-import 'package:tag_it/screens/home_screen.dart';
 import 'package:tag_it/screens/welcome_screen.dart';
 import 'package:tag_it/screens/login_screen.dart';
+import 'package:tag_it/screens/navigation_screen.dart';
+import 'package:tag_it/services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -20,23 +20,23 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _checkAuthStatus() async {
-    await Future.delayed(const Duration(seconds: 2));
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    if (authProvider.user != null) {
-      if (authProvider.isNewUser) {
+    await Future.delayed(const Duration(seconds: 3));
+    final user = AuthService().currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final hasCompletedOnboarding = doc.data()?['hasCompletedOnboarding'] ?? false;
+      if (!hasCompletedOnboarding) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const WelcomeScreen()),
         );
       } else {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const NavigationScreen()),
         );
       }
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
   }

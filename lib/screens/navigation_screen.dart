@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import '../widgets/navbar_view.dart';
+import 'package:tag_it/widgets/navbar_view.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
-import 'kontribusi_screen.dart';
+import 'reminder_screen.dart';
 
-class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({Key? key}) : super(key: key);
+class NavigationScreen extends StatefulWidget {
+  const NavigationScreen({Key? key}) : super(key: key);
 
   @override
-  _MainNavigationScreenState createState() => _MainNavigationScreenState();
+  _NavigationScreenState createState() => _NavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _NavigationScreenState extends State<NavigationScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
     HomeScreen(),
-    KontribusiScreen(),
-    Center(child: Text("Halaman Disimpan")), //sementara cuy
+    ReminderScreen(),
+    Center(child: Text("Halaman Disimpan")),
     ProfileScreen(),
   ];
 

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
-import 'providers/auth_provider.dart';
+// import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -10,10 +9,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => AuthProvider(),
-      child: const MyApp(),
-    ),
+    const MyApp(),
   );
 }
 

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:tag_it/providers/auth_provider.dart';
-import 'MainNavigationScreen.dart';
+import 'package:tag_it/services/auth_service.dart';
+import 'navigation_screen.dart';
 
 class OnboardingPageContent {
   final String imagePath;
@@ -27,7 +26,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // Data untuk setiap halaman onboarding Anda
   final List<OnboardingPageContent> onboardingPages = [
     OnboardingPageContent(
       imagePath: 'assets/images/board2.png',
@@ -55,13 +53,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.dispose();
   }
 
-  void _navigateToHome() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.markOnboardingComplete();
-
+  Future<void> _navigateToHome() async {
+    final user = AuthService().currentUser;
+    if (user != null) {
+      await AuthService().markOnboardingComplete(user);
+    }
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+      MaterialPageRoute(builder: (context) => const NavigationScreen()),
     );
   }
 
@@ -131,10 +130,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       width: _currentPage == index ? 24 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color:
-                            _currentPage == index
-                                ? const Color(0xFF87AFFF) // Warna aktif
-                                : Colors.grey.shade400, // Warna tidak aktif
+                        color: _currentPage == index
+                            ? const Color(0xFF87AFFF)
+                            : Colors.grey.shade400,
                         borderRadius: BorderRadius.circular(8),
                       ),
                     );
@@ -144,74 +142,73 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 // Button navigasi
                 _currentPage < onboardingPages.length - 1
                     ? Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed:
-                              _navigateToHome, // Menggunakan _navigateToHome
-                          child: Text(
-                            'Lewati',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              color: Colors.black54,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: _navigateToHome,
+                            child: Text(
+                              'Lewati',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                color: Colors.black54,
+                              ),
                             ),
                           ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            _pageController.nextPage(
-                              duration: const Duration(milliseconds: 400),
-                              curve: Curves.easeIn,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF87AFFF),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                          ElevatedButton(
+                            onPressed: () {
+                              _pageController.nextPage(
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeIn,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF87AFFF),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 25,
+                                vertical: 12,
+                              ),
+                              elevation: 5,
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 25,
-                              vertical: 12,
+                            child: Text(
+                              'Lanjut',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            elevation: 5,
                           ),
-                          child: Text(
-                            'Lanjut',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
+                        ],
+                      )
                     : Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: _onDoneOrLoginPressed,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF87AFFF),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                        children: [
+                          ElevatedButton(
+                            onPressed: _onDoneOrLoginPressed,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF87AFFF),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              minimumSize: const Size(
+                                double.infinity,
+                                50,
+                              ),
+                              elevation: 5,
                             ),
-                            minimumSize: const Size(
-                              double.infinity,
-                              50,
-                            ), // Lebar penuh
-                            elevation: 5,
-                          ),
-                          child: Text(
-                            'Mulai Aplikasi',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            child: Text(
+                              'Mulai Aplikasi',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
               ],
             ),
           ),

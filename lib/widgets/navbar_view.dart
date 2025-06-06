@@ -20,8 +20,7 @@ class NavbarView extends StatelessWidget {
       type: BottomNavigationBarType.fixed,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
-        BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Kontribusi'),
-        BottomNavigationBarItem(icon: Icon(Icons.bookmark_border), label: 'Disimpan'),
+        BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Tambah Pengingat'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
