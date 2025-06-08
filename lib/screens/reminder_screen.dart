@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart'; // Package untuk format tanggal
 
 class ReminderScreen extends StatefulWidget {
   const ReminderScreen({super.key});
@@ -10,143 +11,174 @@ class ReminderScreen extends StatefulWidget {
 }
 
 class _ReminderScreenState extends State<ReminderScreen> {
-  GoogleMapController? _mapController;
-  LatLng? _initialPosition; // Posisi awal pengguna
-  LatLng? _selectedPosition; // Posisi yang dipilih oleh pin
-
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _getUserLocation();
+  // Mendapatkan stream data pengingat dari Firestore
+  Stream<QuerySnapshot> _getRemindersStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Mengembalikan stream kosong jika pengguna tidak login
+      return const Stream.empty();
+    }
+    return FirebaseFirestore.instance
+        .collection('reminders')
+        .where('userId', isEqualTo: user.uid)
+        .orderBy(
+          'createdAt',
+          descending: true,
+        ) // Menampilkan yang terbaru di atas
+        .snapshots(); // .snapshots() membuat stream real-time
   }
 
-  Future<void> _getUserLocation() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        setState(() {
-          _initialPosition = const LatLng(-6.200000, 106.816666);
-          _selectedPosition = _initialPosition;
-          _isLoading = false;
-        });
-        return;
+  // Fungsi untuk menghapus pengingat
+  Future<void> _deleteReminder(String docId) async {
+    // Tampilkan dialog konfirmasi sebelum menghapus
+    bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Hapus Pengingat'),
+          content: const Text(
+            'Apakah Anda yakin ingin menghapus pengingat ini?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false), // Batal
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed:
+                  () => Navigator.of(context).pop(true), // Konfirmasi hapus
+              child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Jika pengguna mengkonfirmasi, hapus dokumen dari Firestore
+    if (confirmDelete == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('reminders')
+            .doc(docId)
+            .delete();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pengingat berhasil dihapus')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus pengingat: $e')),
+        );
       }
     }
-
-    if (permission == LocationPermission.deniedForever) {
-      // Handle kasus di mana pengguna memblokir izin lokasi secara permanen
-       setState(() {
-          _initialPosition = const LatLng(-6.200000, 106.816666);
-          _selectedPosition = _initialPosition;
-          _isLoading = false;
-        });
-      return;
-    }
-
-    // Jika izin diberikan, dapatkan posisi
-    final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-    setState(() {
-      _initialPosition = LatLng(position.latitude, position.longitude);
-      _selectedPosition = _initialPosition; // Awalnya, posisi terpilih sama dengan posisi awal
-      _isLoading = false;
-    });
   }
-
-  // Callback yang dipanggil setiap kali peta digerakkan
-  void _onCameraMove(CameraPosition position) {
-    // Update posisi yang dipilih sesuai dengan pusat peta
-    setState(() {
-      _selectedPosition = position.target;
-    });
-  }
-
-  void _simpanKoordinat() {
-    if (_selectedPosition != null) {
-      final lat = _selectedPosition!.latitude;
-      final lon = _selectedPosition!.longitude;
-
-      // Tampilkan notifikasi (SnackBar) dengan koordinat yang disimpan
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lokasi disimpan! Koordinat: Lat: $lat, Lon: $lon'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      // Di sini Anda bisa menambahkan logika lebih lanjut,
-      // misalnya menyimpan ke database atau mengirim ke halaman lain.
-      // Navigator.pop(context, _selectedPosition);
-    }
-  }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tandai Lokasi Tujuan'),
-        centerTitle: true,
+        title: const Text('Daftar Pengingat'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                // Widget Google Map sebagai background
-                GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: _initialPosition!,
-                    zoom: 16.0,
-                  ),
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                  },
-                  onCameraMove: _onCameraMove, // Ini adalah kunci utama!
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _getRemindersStream(),
+        builder: (context, snapshot) {
+          // Tampilkan indikator loading saat menunggu data
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                // Pin yang berada di tengah layar
-                Center(
-                  child: Transform.translate(
-                    // Sedikit menaikkan pin agar ujung bawahnya pas di tengah
-                    offset: const Offset(0, -25), 
-                    child: const Icon(
-                      Icons.location_pin,
-                      size: 50,
-                      color: Colors.red,
-                    ),
+          // Tampilkan pesan error jika terjadi kesalahan
+          if (snapshot.hasError) {
+            return Center(child: Text('Terjadi kesalahan: ${snapshot.error}'));
+          }
+
+          // Tampilkan pesan jika tidak ada data/pengingat
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    size: 80,
+                    color: Colors.grey[400],
                   ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum Ada Pengingat',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tambahkan pengingat melalui halaman Peta.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Jika ada data, tampilkan dalam bentuk ListView
+          final reminders = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: reminders.length,
+            padding: const EdgeInsets.all(8.0),
+            itemBuilder: (context, index) {
+              final reminderDoc = reminders[index];
+              final data = reminderDoc.data() as Map<String, dynamic>;
+
+              // Format tanggal (jika ada)
+              String formattedDate = 'Tanggal tidak tersedia';
+              if (data['createdAt'] != null) {
+                DateTime createdAt = (data['createdAt'] as Timestamp).toDate();
+                formattedDate = DateFormat(
+                  'd MMMM yyyy, HH:mm',
+                ).format(createdAt);
+              }
+
+              return Card(
+                elevation: 3.0,
+                margin: const EdgeInsets.symmetric(
+                  vertical: 6.0,
+                  horizontal: 8.0,
                 ),
-                
-                // Tombol Simpan di bagian bawah
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    margin: const EdgeInsets.all(20.0),
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Simpan Lokasi Ini'),
-                      onPressed: _simpanKoordinat,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold
-                        ),
-                      ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).primaryColorLight,
+                    child: Icon(
+                      Icons.location_on,
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
-                )
-              ],
-            ),
+                  title: Text(
+                    data['name'] ?? 'Tanpa Judul',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    'Radius: ${data['triggerRadius']} meter\nDibuat pada: $formattedDate',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () {
+                      _deleteReminder(reminderDoc.id);
+                    },
+                    tooltip: 'Hapus Pengingat',
+                  ),
+                  isThreeLine: true,
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

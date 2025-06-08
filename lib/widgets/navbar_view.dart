@@ -4,11 +4,8 @@ class NavbarView extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTap;
 
-  const NavbarView({
-    Key? key,
-    required this.selectedIndex,
-    required this.onTap,
-  }) : super(key: key);
+  const NavbarView({Key? key, required this.selectedIndex, required this.onTap})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +17,10 @@ class NavbarView extends StatelessWidget {
       type: BottomNavigationBarType.fixed,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
-        BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Tambah Pengingat'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.add_box_outlined),
+          label: 'List Pengingat',
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

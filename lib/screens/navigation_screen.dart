@@ -17,7 +17,6 @@ class _NavigationScreenState extends State<NavigationScreen> {
   final List<Widget> _screens = [
     HomeScreen(),
     ReminderScreen(),
-    Center(child: Text("Halaman Disimpan")),
     ProfileScreen(),
   ];
 
