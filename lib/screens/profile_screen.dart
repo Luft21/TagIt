@@ -1,46 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tag_it/services/auth_service.dart';
 import 'package:tag_it/screens/login_screen.dart';
+import 'package:tag_it/screens/welcome_screen.dart';
 
 const Color primaryColor = Color(0xFF4A90E2);
 const Color backgroundColor = Color(0xFFF4F6F8);
-const Color cardColor = Colors.white;
 const Color textColor = Color(0xFF2D3748);
 const Color secondaryTextColor = Color(0xFF718096);
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  Widget _buildProfileHeader(User currentUser) {
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+  int? _activeCount;
+  int? _inactiveCount;
+  bool _isLoadingStats = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReminderStats();
+  }
+
+  Future<void> _fetchReminderStats() async {
+    if (currentUser == null) {
+      setState(() => _isLoadingStats = false);
+      return;
+    }
+    try {
+      final activeQuery = FirebaseFirestore.instance
+          .collection('reminders')
+          .where('userId', isEqualTo: currentUser!.uid)
+          .where('isActive', isEqualTo: true);
+
+      final inactiveQuery = FirebaseFirestore.instance
+          .collection('reminders')
+          .where('userId', isEqualTo: currentUser!.uid)
+          .where('isActive', isEqualTo: false);
+
+      final activeResult = await activeQuery.count().get();
+      final inactiveResult = await inactiveQuery.count().get();
+
+      if (mounted) {
+        setState(() {
+          _activeCount = activeResult.count;
+          _inactiveCount = inactiveResult.count;
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingStats = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildProfileHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 24.0),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: Colors.white,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, 4),
+            blurRadius: 10,
+          ),
+        ],
       ),
-      child: Column(
+      child: Row(
         children: [
           CircleAvatar(
-            radius: 52,
-            backgroundColor: Colors.white,
+            radius: 32,
+            backgroundColor: primaryColor.withOpacity(0.1),
             child: CircleAvatar(
-              radius: 50,
+              radius: 30,
               backgroundColor: Colors.grey.shade200,
               backgroundImage:
-                  currentUser.photoURL != null
-                      ? NetworkImage(currentUser.photoURL!)
+                  currentUser?.photoURL != null
+                      ? NetworkImage(currentUser!.photoURL!)
                       : null,
               child:
-                  currentUser.photoURL == null
+                  currentUser?.photoURL == null
                       ? Text(
-                        currentUser.displayName
+                        currentUser?.displayName
                                 ?.substring(0, 1)
                                 .toUpperCase() ??
                             'T',
                         style: GoogleFonts.poppins(
-                          fontSize: 48,
+                          fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
                         ),
@@ -48,27 +107,87 @@ class ProfileScreen extends StatelessWidget {
                       : null,
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            currentUser.displayName ?? 'Pengguna TagIt',
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: textColor,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  currentUser?.displayName ?? 'Pengguna TagIt',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  currentUser?.email ?? 'Email tidak tersedia',
+                  style: GoogleFonts.lato(
+                    fontSize: 14,
+                    color: secondaryTextColor,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            currentUser.email ?? 'Email tidak tersedia',
-            style: GoogleFonts.lato(fontSize: 16, color: secondaryTextColor),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildStatCard({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required int? count,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withOpacity(0.8),
+              foregroundColor: Colors.white,
+              radius: 20,
+              child: Icon(icon, size: 22),
+            ),
+            const SizedBox(height: 12),
+            _isLoadingStats
+                ? const SizedBox(
+                  height: 28,
+                  width: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: secondaryTextColor,
+                  ),
+                )
+                : Text(
+                  count?.toString() ?? '0',
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.lato(fontSize: 14, color: secondaryTextColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMenuOption({
-    required BuildContext context,
     required IconData icon,
     required String title,
     VoidCallback? onTap,
@@ -117,8 +236,6 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-
     if (currentUser == null) {
       return const Center(
         child: CircularProgressIndicator(color: primaryColor),
@@ -184,46 +301,54 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
-          _buildProfileHeader(currentUser),
-
-          _buildSectionTitle('Aktivitas'),
-          _buildMenuOption(
-            context: context,
-            icon: Icons.history_outlined,
-            title: 'Riwayat Pengingat',
-            onTap: () {},
+          _buildProfileHeader(),
+          _buildSectionTitle('Statistik'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                _buildStatCard(
+                  icon: Icons.notifications_active,
+                  color: primaryColor,
+                  label: 'Aktif',
+                  count: _activeCount,
+                ),
+                const SizedBox(width: 16),
+                _buildStatCard(
+                  icon: Icons.notifications_off,
+                  color: secondaryTextColor,
+                  label: 'Nonaktif',
+                  count: _inactiveCount,
+                ),
+              ],
+            ),
           ),
-
-          _buildSectionTitle('Pengaturan'),
+          _buildSectionTitle('Bantuan'),
           _buildMenuOption(
-            context: context,
-            icon: Icons.person_outline,
-            title: 'Edit Profil',
-            onTap: () {},
+            icon: Icons.help_outline_rounded,
+            title: 'Guide Aplikasi',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+              );
+            },
           ),
           _buildMenuOption(
-            context: context,
             icon: Icons.notifications_outlined,
-            title: 'Notifikasi',
-            onTap: () {},
+            title: 'Nada Dering',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+              );
+            },
           ),
-          _buildMenuOption(
-            context: context,
-            icon: Icons.privacy_tip_outlined,
-            title: 'Kebijakan Privasi',
-            onTap: () {},
-          ),
-
           const Divider(height: 32, thickness: 1, indent: 24, endIndent: 24),
-
           _buildMenuOption(
-            context: context,
             icon: Icons.logout,
             title: 'Logout',
             color: Colors.redAccent,
             onTap: handleLogout,
           ),
-
           const SizedBox(height: 40),
           Center(
             child: Text(
