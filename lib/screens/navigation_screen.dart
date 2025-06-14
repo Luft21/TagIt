@@ -15,9 +15,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    HomeScreen(),
-    ReminderScreen(),
-    ProfileScreen(),
+    const HomeScreen(),
+    const ReminderScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -29,10 +29,18 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: NavbarView(
-        selectedIndex: _selectedIndex,
-        onTap: _onItemTapped,
+      body: Stack(
+        children: [
+          _screens[_selectedIndex],
+
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: NavbarView(
+              selectedIndex: _selectedIndex,
+              onTap: _onItemTapped,
+            ),
+          ),
+        ],
       ),
     );
   }

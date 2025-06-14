@@ -2,10 +2,13 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart' as places_sdk;
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
+    as places_sdk;
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tag_it/models/reminder_model.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../widgets/custom_toast.dart';
 
 const kGoogleApiKey = 'AIzaSyDvbiq-Uwemy8QMtkLvtuheSxCqkq1xZ-U';
 
@@ -46,20 +49,22 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadReminders() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final snapshot = await FirebaseFirestore.instance
-        .collection('reminders')
-        .where('userId', isEqualTo: user.uid)
-        .where('isActive', isEqualTo: true)
-        .get();
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('reminders')
+            .where('userId', isEqualTo: user.uid)
+            .where('isActive', isEqualTo: true)
+            .get();
 
-    final markers = snapshot.docs.map((doc) {
-      final data = doc.data();
-      return Marker(
-        markerId: MarkerId(doc.id),
-        position: LatLng(data['latitude'], data['longitude']),
-        infoWindow: InfoWindow(title: data['name']),
-      );
-    }).toSet();
+    final markers =
+        snapshot.docs.map((doc) {
+          final data = doc.data();
+          return Marker(
+            markerId: MarkerId(doc.id),
+            position: LatLng(data['latitude'], data['longitude']),
+            infoWindow: InfoWindow(title: data['name']),
+          );
+        }).toSet();
 
     setState(() {
       _reminderMarkers = markers;
@@ -82,64 +87,138 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showAddReminderModal(LatLng position) {
     final TextEditingController _titleController = TextEditingController();
-    final TextEditingController _radiusController = TextEditingController(text: '100');
+    final TextEditingController _radiusController = TextEditingController(
+      text: '100',
+    );
+
+    const Color primaryColor = Color(0xFF4A90E2);
+    const Color cardColor = Colors.white;
+    const Color textColor = Color(0xFF2D3748);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 24,
+        return Container(
+          decoration: const BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Tambah Pengingat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(labelText: 'Judul Pengingat'),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                8,
+                24,
+                MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              TextField(
-                controller: _radiusController,
-                decoration: InputDecoration(labelText: 'Radius (meter)'),
-                keyboardType: TextInputType.number,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Tambah Pengingat',
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _titleController,
+                    style: GoogleFonts.lato(),
+                    decoration: InputDecoration(
+                      labelText: 'Judul Pengingat',
+                      labelStyle: GoogleFonts.poppins(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.label_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _radiusController,
+                    style: GoogleFonts.lato(),
+                    decoration: InputDecoration(
+                      labelText: 'Radius Pemicu',
+                      labelStyle: GoogleFonts.poppins(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.radar_outlined),
+                      suffixText: 'meter',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add_location_alt_outlined),
+                      label: Text(
+                        'Simpan Pengingat',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+
+                      onPressed: () async {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null) return;
+                        await FirebaseFirestore.instance
+                            .collection('reminders')
+                            .add({
+                              'userId': user.uid,
+                              'name':
+                                  _titleController.text.isNotEmpty
+                                      ? _titleController.text
+                                      : 'Pengingat Baru',
+                              'latitude': position.latitude,
+                              'longitude': position.longitude,
+                              'triggerRadius':
+                                  double.tryParse(_radiusController.text) ??
+                                  100,
+                              'isActive': true,
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          showSuccessToast(
+                            context,
+                            'Pengingat berhasil disimpan!',
+                          );
+                          _loadReminders();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user == null) return;
-                  final reminder = ReminderModel(
-                    userId: user.uid,
-                    name: _titleController.text,
-                    latitude: position.latitude,
-                    longitude: position.longitude,
-                    triggerRadius: double.tryParse(_radiusController.text) ?? 100,
-                    isActive: true,
-                  );
-                  await FirebaseFirestore.instance.collection('reminders').add({
-                    'userId': reminder.userId,
-                    'name': reminder.name,
-                    'latitude': reminder.latitude,
-                    'longitude': reminder.longitude,
-                    'triggerRadius': reminder.triggerRadius,
-                    'isActive': reminder.isActive,
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Pengingat berhasil disimpan!')),
-                  );
-                  _loadReminders(); // refresh marker
-                },
-                child: const Text('Simpan'),
-              ),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
         );
       },
@@ -161,7 +240,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _onSelectPrediction(places_sdk.AutocompletePrediction prediction) async {
+  Future<void> _onSelectPrediction(
+    places_sdk.AutocompletePrediction prediction,
+  ) async {
     final placeId = prediction.placeId;
 
     final details = await _places.fetchPlace(
@@ -173,9 +254,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final lng = details.place?.latLng?.lng;
     if (lat != null && lng != null) {
       final newPos = LatLng(lat, lng);
-      _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: newPos, zoom: 15),
-      ));
+      _mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: newPos, zoom: 15),
+        ),
+      );
       _searchController.removeListener(_onSearchChanged);
       setState(() {
         _searchController.text = prediction.fullText;
@@ -188,9 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_currentPosition == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -230,19 +311,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         hintText: 'Cari lokasi...',
                         prefixIcon: const Icon(Icons.search),
                         border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _predictions = [];
-                                  });
-                                },
-                              )
-                            : null,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 20,
+                        ),
+                        suffixIcon:
+                            _searchController.text.isNotEmpty
+                                ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _predictions = [];
+                                    });
+                                  },
+                                )
+                                : null,
                       ),
                     ),
                   ),
@@ -254,10 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                            )
+                            BoxShadow(color: Colors.black12, blurRadius: 8),
                           ],
                         ),
                         child: ListView.builder(
@@ -272,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                       ),
-                    )
+                    ),
                 ],
               ),
             ),
