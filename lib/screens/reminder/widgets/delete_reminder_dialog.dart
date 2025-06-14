@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../utils/constants.dart';
-import '../../../widgets/custom_toast.dart';
+import 'package:tag_it/utils/constants.dart';
 
-Future<void> showDeleteReminderDialog(BuildContext context, String docId) async {
-  bool? confirmDelete = await showDialog<bool>(
+Future<bool?> showDeleteReminderDialog(BuildContext context) async {
+  return await showDialog<bool>(
     context: context,
-    builder: (BuildContext context) {
+    builder: (BuildContext dialogContext) {
       return Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20.0),
@@ -38,7 +36,7 @@ Future<void> showDeleteReminderDialog(BuildContext context, String docId) async 
               ),
               const SizedBox(height: 8),
               Text(
-                'Tindakan ini tidak dapat diurungkan. Anda akan menghapus pengingat ini secara permanen.',
+                'Tindakan ini tidak dapat diurungkan.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.lato(
                   fontSize: 15,
@@ -50,7 +48,7 @@ Future<void> showDeleteReminderDialog(BuildContext context, String docId) async 
                 children: [
                   Expanded(
                     child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
                       child: Text(
                         'Batal',
                         style: GoogleFonts.poppins(
@@ -72,7 +70,7 @@ Future<void> showDeleteReminderDialog(BuildContext context, String docId) async 
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      onPressed: () => Navigator.of(context).pop(true),
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
                       child: Text(
                         'Hapus',
                         style: GoogleFonts.poppins(
@@ -90,9 +88,4 @@ Future<void> showDeleteReminderDialog(BuildContext context, String docId) async 
       );
     },
   );
-
-  if (confirmDelete == true && context.mounted) {
-    await FirebaseFirestore.instance.collection('reminders').doc(docId).delete();
-    showSuccessToast(context, 'Pengingat berhasil dihapus.');
-  }
 }

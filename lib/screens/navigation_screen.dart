@@ -16,7 +16,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    const ReminderScreen(),
+    const ReminderListScreen(),
     const ProfileScreen(),
   ];
 
@@ -32,10 +32,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
       extendBody: true,
       body: Stack(
         children: [
-          IndexedStack(
-            index: _selectedIndex,
-            children: _screens,
-          ),
+          IndexedStack(index: _selectedIndex, children: _screens),
           Positioned(
             left: 0,
             right: 0,

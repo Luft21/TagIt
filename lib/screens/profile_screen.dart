@@ -20,49 +20,19 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
-  int? _activeCount;
-  int? _inactiveCount;
-  bool _isLoadingStats = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchReminderStats();
-  }
-
-  Future<void> _fetchReminderStats() async {
-    if (currentUser == null) {
-      setState(() => _isLoadingStats = false);
-      return;
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Selamat Pagi,';
     }
-    try {
-      final activeQuery = FirebaseFirestore.instance
-          .collection('reminders')
-          .where('userId', isEqualTo: currentUser!.uid)
-          .where('isActive', isEqualTo: true);
-
-      final inactiveQuery = FirebaseFirestore.instance
-          .collection('reminders')
-          .where('userId', isEqualTo: currentUser!.uid)
-          .where('isActive', isEqualTo: false);
-
-      final activeResult = await activeQuery.count().get();
-      final inactiveResult = await inactiveQuery.count().get();
-
-      if (mounted) {
-        setState(() {
-          _activeCount = activeResult.count;
-          _inactiveCount = inactiveResult.count;
-          _isLoadingStats = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingStats = false;
-        });
-      }
+    if (hour < 15) {
+      return 'Selamat Siang,';
     }
+    if (hour < 18) {
+      return 'Selamat Sore,';
+    }
+    return 'Selamat Malam,';
   }
 
   Widget _buildProfileHeader() {
@@ -79,13 +49,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
           CircleAvatar(
-            radius: 32,
+            radius: 52,
             backgroundColor: primaryColor.withOpacity(0.1),
             child: CircleAvatar(
-              radius: 30,
+              radius: 50,
               backgroundColor: Colors.grey.shade200,
               backgroundImage:
                   currentUser?.photoURL != null
@@ -99,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 .toUpperCase() ??
                             'T',
                         style: GoogleFonts.poppins(
-                          fontSize: 32,
+                          fontSize: 48,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
                         ),
@@ -107,28 +77,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : null,
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  currentUser?.displayName ?? 'Pengguna TagIt',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  currentUser?.email ?? 'Email tidak tersedia',
-                  style: GoogleFonts.lato(
-                    fontSize: 14,
-                    color: secondaryTextColor,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 16),
+          Text(
+            _getGreeting(),
+            style: GoogleFonts.lato(fontSize: 16, color: secondaryTextColor),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            currentUser?.displayName ?? 'Pengguna TagIt',
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: textColor,
             ),
           ),
         ],
@@ -159,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Icon(icon, size: 22),
             ),
             const SizedBox(height: 12),
-            _isLoadingStats
+            count == null
                 ? const SizedBox(
                   height: 28,
                   width: 28,
@@ -169,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 )
                 : Text(
-                  count?.toString() ?? '0',
+                  count.toString(),
                   style: GoogleFonts.poppins(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -188,8 +148,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMenuOption({
-    required IconData icon,
     required String title,
+    required IconData icon,
     VoidCallback? onTap,
     Color color = textColor,
   }) {
@@ -303,39 +263,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           _buildProfileHeader(),
           _buildSectionTitle('Statistik'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                _buildStatCard(
-                  icon: Icons.notifications_active,
-                  color: primaryColor,
-                  label: 'Aktif',
-                  count: _activeCount,
+          StreamBuilder<QuerySnapshot>(
+            stream:
+                FirebaseFirestore.instance
+                    .collection('reminders')
+                    .where('userId', isEqualTo: currentUser!.uid)
+                    .snapshots(),
+            builder: (context, snapshot) {
+              int? activeCount;
+              int? inactiveCount;
+
+              if (snapshot.hasData) {
+                final docs = snapshot.data!.docs;
+                activeCount =
+                    docs.where((doc) => doc.get('isActive') == true).length;
+                inactiveCount =
+                    docs.where((doc) => doc.get('isActive') == false).length;
+              }
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    _buildStatCard(
+                      icon: Icons.notifications_active,
+                      color: primaryColor,
+                      label: 'Aktif',
+                      count: activeCount,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildStatCard(
+                      icon: Icons.notifications_off,
+                      color: secondaryTextColor,
+                      label: 'Nonaktif',
+                      count: inactiveCount,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                _buildStatCard(
-                  icon: Icons.notifications_off,
-                  color: secondaryTextColor,
-                  label: 'Nonaktif',
-                  count: _inactiveCount,
-                ),
-              ],
-            ),
+              );
+            },
           ),
           _buildSectionTitle('Bantuan'),
           _buildMenuOption(
             icon: Icons.help_outline_rounded,
             title: 'Guide Aplikasi',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-              );
-            },
-          ),
-          _buildMenuOption(
-            icon: Icons.notifications_outlined,
-            title: 'Nada Dering',
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const WelcomeScreen()),

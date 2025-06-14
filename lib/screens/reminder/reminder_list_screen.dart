@@ -2,27 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../utils/constants.dart';
+import 'package:tag_it/utils/constants.dart';
+import 'package:tag_it/widgets/custom_toast.dart';
 import 'widgets/reminder_card.dart';
+import 'widgets/delete_reminder_dialog.dart';
 
-class ReminderScreen extends StatefulWidget {
-  const ReminderScreen({super.key});
+class ReminderListScreen extends StatefulWidget {
+  const ReminderListScreen({super.key});
 
   @override
-  State<ReminderScreen> createState() => _ReminderScreenState();
+  State<ReminderListScreen> createState() => _ReminderListScreenState();
 }
 
-class _ReminderScreenState extends State<ReminderScreen> {
+class _ReminderListScreenState extends State<ReminderListScreen> {
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+
   Stream<QuerySnapshot> _getRemindersStream() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (currentUser == null) {
       return const Stream.empty();
     }
     return FirebaseFirestore.instance
         .collection('reminders')
-        .where('userId', isEqualTo: user.uid)
+        .where('userId', isEqualTo: currentUser!.uid)
         .orderBy('createdAt', descending: true)
         .snapshots();
+  }
+
+  Future<void> _deleteReminder(String docId) async {
+    final bool? confirmDelete = await showDeleteReminderDialog(context);
+
+    if (confirmDelete == true && mounted) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('reminders')
+            .doc(docId)
+            .delete();
+        showSuccessToast(context, 'Pengingat berhasil dihapus.');
+      } catch (e) {
+        showErrorToast(context, 'Gagal menghapus pengingat.');
+      }
+    }
   }
 
   Widget _buildHeader() {
@@ -52,7 +71,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
               color: Colors.white,
             ),
           ),
-          const Icon(Icons.alarm, color: Colors.white, size: 32),
+          const Icon(Icons.list_alt_rounded, color: Colors.white, size: 32),
         ],
       ),
     );
@@ -67,11 +86,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.map_outlined,
-                  size: 100,
-                  color: Colors.grey[300],
-                ),
+                Icon(Icons.map_outlined, size: 100, color: Colors.grey[300]),
                 const SizedBox(height: 24),
                 Text(
                   'Belum Ada Pengingat',
@@ -119,10 +134,13 @@ class _ReminderScreenState extends State<ReminderScreen> {
                 final reminders = snapshot.data!.docs;
                 return ListView.builder(
                   itemCount: reminders.length,
-                  padding: const EdgeInsets.fromLTRB(16, 130, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 120, 16, 100),
                   itemBuilder: (context, index) {
                     final reminderDoc = reminders[index];
-                    return ReminderCard(reminderDoc: reminderDoc);
+                    return ReminderCard(
+                      reminderDoc: reminderDoc,
+                      onDelete: () => _deleteReminder(reminderDoc.id),
+                    );
                   },
                 );
               },

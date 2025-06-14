@@ -1,20 +1,18 @@
-import 'dart:async'; // --- BARU ---
+import 'dart:async';
 import 'dart:io';
-import 'package:audioplayers/audioplayers.dart'; // --- BARU ---
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart'; // --- BARU ---
-import 'package:flutter_tts/flutter_tts.dart'; // --- BARU ---
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:vibration/vibration.dart'; // --- BARU ---
-
-import '../../../models/reminder_model.dart';
-import '../../../utils/constants.dart';
-import '../../../widgets/custom_toast.dart';
-
+import 'package:vibration/vibration.dart';
+import 'package:tag_it/models/reminder_model.dart';
+import 'package:tag_it/utils/constants.dart';
+import 'package:tag_it/widgets/custom_toast.dart';
 
 class EditReminderSheet extends StatefulWidget {
   final DocumentSnapshot reminderDoc;
@@ -30,11 +28,10 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
   late bool _vibrateOn;
   late bool _isTextToSpeechEnabled;
   late String _selectedRingtone;
-
+  late bool _isActive;
   List<String> _ringtones = [];
   bool _isLoadingRingtones = true;
 
-  // --- BARU: Instance untuk paket-paket notifikasi ---
   final FlutterTts _flutterTts = FlutterTts();
   final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _testTimer;
@@ -51,27 +48,26 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
     _reminder = ReminderModel.fromMap(data);
 
     _nameController = TextEditingController(text: _reminder.name);
-    _radiusController = TextEditingController(text: _reminder.triggerRadius.toString());
+    _radiusController = TextEditingController(
+      text: _reminder.triggerRadius.toString(),
+    );
     _vibrateOn = _reminder.vibrate;
     _isTextToSpeechEnabled = _reminder.ttsEnabled;
     _selectedRingtone = _reminder.ringtone;
+    _isActive = _reminder.isActive;
 
     _loadAvailableRingtones();
     _setupTts();
   }
-  
-  // --- BARU: Inisialisasi dasar untuk TTS ---
+
   void _setupTts() {
-    _flutterTts.setLanguage("id-ID"); // Atur ke Bahasa Indonesia
+    _flutterTts.setLanguage("id-ID");
     _flutterTts.setSpeechRate(0.5);
     _flutterTts.setPitch(1.0);
   }
 
-  // ... (Fungsi _loadAvailableRingtones, _getRingtoneDirectory, _pickAndCopyRingtone tidak berubah)
   Future<void> _loadAvailableRingtones() async {
-    setState(() {
-      _isLoadingRingtones = true;
-    });
+    setState(() => _isLoadingRingtones = true);
 
     List<String> availableRingtones = [
       _silentOption,
@@ -104,10 +100,13 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
   }
 
   Future<Directory> _getRingtoneDirectory() async {
-    final dirs = await getExternalStorageDirectories(type: StorageDirectory.documents);
+    final dirs = await getExternalStorageDirectories(
+      type: StorageDirectory.documents,
+    );
     if (dirs == null || dirs.isEmpty) {
       final internalDir = await getApplicationDocumentsDirectory();
-      return Directory(p.join(internalDir.path, 'Ringtones'))..createSync(recursive: true);
+      return Directory(p.join(internalDir.path, 'Ringtones'))
+        ..createSync(recursive: true);
     }
     final ringtonePath = p.join(dirs.first.path, 'Ringtones');
     return Directory(ringtonePath)..createSync(recursive: true);
@@ -126,9 +125,7 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
       showSuccessToast(context, '$fileName ditambahkan.');
 
       await _loadAvailableRingtones();
-      setState(() {
-        _selectedRingtone = fileName;
-      });
+      setState(() => _selectedRingtone = fileName);
     }
   }
 
@@ -136,12 +133,11 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
   void dispose() {
     _nameController.dispose();
     _radiusController.dispose();
-    _stopTest(); // --- BARU: Pastikan semua suara/getar berhenti saat sheet ditutup
+    _stopTest();
     _testTimer?.cancel();
     super.dispose();
   }
 
-  // --- FUNGSI BARU UNTUK MENGHENTIKAN SEMUA UJI COBA ---
   Future<void> _stopTest() async {
     await _flutterTts.stop();
     await _audioPlayer.stop();
@@ -149,12 +145,10 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
     await Vibration.cancel();
   }
 
-  // --- FUNGSI BARU UNTUK MENJALANKAN UJI COBA ---
   Future<void> _runTest() async {
     await _stopTest();
     _testTimer?.cancel();
 
-    // 1. Uji Coba Getaran
     if (_vibrateOn) {
       bool? hasVibrator = await Vibration.hasVibrator();
       if (hasVibrator ?? false) {
@@ -162,7 +156,6 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
       }
     }
 
-    // 2. Uji Coba Suara (TTS atau Nada Dering)
     if (_isTextToSpeechEnabled) {
       String textToSay = _nameController.text.trim();
       if (textToSay.isEmpty) {
@@ -178,9 +171,8 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
           FlutterRingtonePlayer().playNotification(looping: true);
           break;
         case _silentOption:
-          // Tidak melakukan apa-apa
           break;
-        default: // Nada dering kustom
+        default:
           final ringtoneDir = await _getRingtoneDirectory();
           final filePath = p.join(ringtoneDir.path, _selectedRingtone);
           if (File(filePath).existsSync()) {
@@ -192,25 +184,25 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
       }
     }
 
-    // 3. Hentikan otomatis setelah 5 detik
     _testTimer = Timer(const Duration(seconds: 5), () {
       _stopTest();
       showSuccessToast(context, 'Uji coba selesai.');
     });
   }
 
-  // ... (Fungsi _saveChanges tidak berubah)
   Future<void> _saveChanges() async {
-    final name = _nameController.text;
-    final radius = double.tryParse(_radiusController.text);
+    if (_isActive) {
+      final name = _nameController.text;
+      final radius = double.tryParse(_radiusController.text);
 
-    if (name.trim().isEmpty) {
-      showErrorToast(context, 'Nama pengingat tidak boleh kosong.');
-      return;
-    }
-    if (radius == null || radius <= 0) {
-      showErrorToast(context, 'Radius harus berupa angka positif.');
-      return;
+      if (name.trim().isEmpty) {
+        showErrorToast(context, 'Nama pengingat tidak boleh kosong.');
+        return;
+      }
+      if (radius == null || radius <= 0) {
+        showErrorToast(context, 'Radius harus berupa angka positif.');
+        return;
+      }
     }
 
     if (mounted) {
@@ -228,18 +220,18 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
           .collection('reminders')
           .doc(widget.reminderDoc.id)
           .update({
-        'name': name,
-        'triggerRadius': radius,
-        'vibrate': _vibrateOn,
-        'ttsEnabled': _isTextToSpeechEnabled,
-        'ringtone': ringtoneToSave,
-      });
+            'isActive': _isActive,
+            'name': _nameController.text,
+            'triggerRadius': double.tryParse(_radiusController.text) ?? 100.0,
+            'vibrate': _vibrateOn,
+            'ttsEnabled': _isTextToSpeechEnabled,
+            'ringtone': ringtoneToSave,
+          });
 
       Navigator.pop(context);
       showSuccessToast(context, 'Pengingat berhasil diperbarui.');
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -251,56 +243,240 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
       child: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.fromLTRB(
-            24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 24,
+            24,
+            8,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ... (UI bagian atas tidak berubah)
-              Center(child: Container(margin: const EdgeInsets.symmetric(vertical: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
-              Text('Edit Pengingat', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
-              const SizedBox(height: 24),
-              TextFormField(controller: _nameController, style: GoogleFonts.lato(), decoration: InputDecoration(labelText: 'Nama Pengingat', labelStyle: GoogleFonts.poppins(), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), prefixIcon: const Icon(Icons.label_outline))),
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Edit Pengingat',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
               const SizedBox(height: 16),
-              TextFormField(controller: _radiusController, style: GoogleFonts.lato(), decoration: InputDecoration(labelText: 'Radius Pemicu', labelStyle: GoogleFonts.poppins(), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), prefixIcon: const Icon(Icons.radar_outlined), suffixText: 'meter'), keyboardType: TextInputType.number),
-              const SizedBox(height: 16),
-              SwitchListTile(title: Text('Gunakan Text to Speech', style: GoogleFonts.poppins()), subtitle: Text('Mengucapkan nama pengingat berulang kali', style: GoogleFonts.lato()), value: _isTextToSpeechEnabled, onChanged: (bool value) => setState(() => _isTextToSpeechEnabled = value), activeColor: primaryColor, contentPadding: const EdgeInsets.symmetric(horizontal: 4), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              const SizedBox(height: 8),
-              if (_isLoadingRingtones) const Center(child: CircularProgressIndicator()) else DropdownButtonFormField<String>(value: _selectedRingtone, isExpanded: true, style: GoogleFonts.lato(color: _isTextToSpeechEnabled ? Colors.grey : textColor), decoration: InputDecoration(labelText: 'Nada Dering', labelStyle: GoogleFonts.poppins(), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), prefixIcon: const Icon(Icons.music_note_outlined), filled: _isTextToSpeechEnabled, fillColor: Colors.grey[200]), items: _ringtones.map((String value) { return DropdownMenuItem<String>(value: value, child: Text(value, overflow: TextOverflow.ellipsis, style: GoogleFonts.lato(color: value == _customRingtoneOption ? primaryColor : null, fontStyle: value == _customRingtoneOption ? FontStyle.italic : FontStyle.normal))); }).toList(), onChanged: _isTextToSpeechEnabled ? null : (String? newValue) { if (newValue == _customRingtoneOption) { _pickAndCopyRingtone(); } else if (newValue != null) { setState(() => _selectedRingtone = newValue); } }),
-              const SizedBox(height: 8),
-              SwitchListTile(title: Text('Getar', style: GoogleFonts.poppins()), value: _vibrateOn, onChanged: (bool value) => setState(() => _vibrateOn = value), activeColor: primaryColor, contentPadding: const EdgeInsets.symmetric(horizontal: 4), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              
-              const SizedBox(height: 24),
-
-              // --- TOMBOL BARU UNTUK UJI COBA ---
+              SwitchListTile(
+                title: Text(
+                  'Pengingat Aktif',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  _isActive ? 'Notifikasi akan muncul' : 'Notifikasi dimatikan',
+                  style: GoogleFonts.lato(),
+                ),
+                value: _isActive,
+                onChanged: (bool value) => setState(() => _isActive = value),
+                activeColor: primaryColor,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const Divider(height: 24),
+              IgnorePointer(
+                ignoring: !_isActive,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 300),
+                  opacity: _isActive ? 1.0 : 0.4,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        enabled: _isActive,
+                        controller: _nameController,
+                        style: GoogleFonts.lato(),
+                        decoration: InputDecoration(
+                          labelText: 'Nama Pengingat',
+                          labelStyle: GoogleFonts.poppins(),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.label_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        enabled: _isActive,
+                        controller: _radiusController,
+                        style: GoogleFonts.lato(),
+                        decoration: InputDecoration(
+                          labelText: 'Radius Pemicu',
+                          labelStyle: GoogleFonts.poppins(),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.radar_outlined),
+                          suffixText: 'meter',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        title: Text(
+                          'Gunakan Text to Speech',
+                          style: GoogleFonts.poppins(),
+                        ),
+                        subtitle: Text(
+                          'Mengucapkan nama pengingat',
+                          style: GoogleFonts.lato(),
+                        ),
+                        value: _isTextToSpeechEnabled,
+                        onChanged:
+                            _isActive
+                                ? (bool value) => setState(
+                                  () => _isTextToSpeechEnabled = value,
+                                )
+                                : null,
+                        activeColor: primaryColor,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_isLoadingRingtones)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        DropdownButtonFormField<String>(
+                          value: _selectedRingtone,
+                          isExpanded: true,
+                          style: GoogleFonts.lato(
+                            color:
+                                _isTextToSpeechEnabled || !_isActive
+                                    ? Colors.grey
+                                    : textColor,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Nada Dering',
+                            labelStyle: GoogleFonts.poppins(),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: const Icon(Icons.music_note_outlined),
+                            filled: _isTextToSpeechEnabled || !_isActive,
+                            fillColor: Colors.grey[200],
+                          ),
+                          items:
+                              _ringtones.map((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(
+                                    value,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.lato(
+                                      color:
+                                          value == _customRingtoneOption
+                                              ? primaryColor
+                                              : null,
+                                      fontStyle:
+                                          value == _customRingtoneOption
+                                              ? FontStyle.italic
+                                              : FontStyle.normal,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                          onChanged:
+                              _isTextToSpeechEnabled || !_isActive
+                                  ? null
+                                  : (String? newValue) {
+                                    if (newValue == _customRingtoneOption) {
+                                      _pickAndCopyRingtone();
+                                    } else if (newValue != null) {
+                                      setState(
+                                        () => _selectedRingtone = newValue,
+                                      );
+                                    }
+                                  },
+                        ),
+                      const SizedBox(height: 8),
+                      SwitchListTile(
+                        title: Text('Getar', style: GoogleFonts.poppins()),
+                        value: _vibrateOn,
+                        onChanged:
+                            _isActive
+                                ? (bool value) =>
+                                    setState(() => _vibrateOn = value)
+                                : null,
+                        activeColor: primaryColor,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.volume_up_outlined),
+                          label: Text(
+                            'Uji Coba Notifikasi',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          onPressed: _isActive ? _runTest : null,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            foregroundColor: primaryColor,
+                            side: BorderSide(
+                              color: _isActive ? primaryColor : Colors.grey,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.volume_up_outlined),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save_as_outlined),
                   label: Text(
-                    'Uji Coba Notifikasi',
+                    'Simpan Perubahan',
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
-                  onPressed: _runTest,
-                  style: OutlinedButton.styleFrom(
+                  onPressed: _saveChanges,
+                  style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    foregroundColor: primaryColor,
-                    side: const BorderSide(color: primaryColor, width: 1.5),
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 12),
-
-              // Tombol Simpan
-              SizedBox(width: double.infinity, child: ElevatedButton.icon(icon: const Icon(Icons.save_as_outlined), label: Text('Simpan Perubahan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)), onPressed: _saveChanges, style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
             ],
           ),
         ),

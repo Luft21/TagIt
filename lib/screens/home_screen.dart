@@ -6,7 +6,6 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart'
     as places_sdk;
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tag_it/models/reminder_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/custom_toast.dart';
 
@@ -27,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<places_sdk.AutocompletePrediction> _predictions = [];
   Timer? _debounce;
   Set<Marker> _reminderMarkers = {};
+  Set<Circle> _reminderCircles = {};
+  StreamSubscription<QuerySnapshot>? _remindersSubscription;
 
   @override
   void initState() {
@@ -34,11 +35,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _places = places_sdk.FlutterGooglePlacesSdk(kGoogleApiKey);
     _initLocation();
     _searchController.addListener(_onSearchChanged);
-    _loadReminders();
+    _listenToReminders();
   }
 
   @override
   void dispose() {
+    _remindersSubscription?.cancel();
     _debounce?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
@@ -46,28 +48,53 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadReminders() async {
+  void _listenToReminders() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('reminders')
-            .where('userId', isEqualTo: user.uid)
-            .where('isActive', isEqualTo: true)
-            .get();
 
-    final markers =
-        snapshot.docs.map((doc) {
-          final data = doc.data();
-          return Marker(
+    final query = FirebaseFirestore.instance
+        .collection('reminders')
+        .where('userId', isEqualTo: user.uid)
+        .where('isActive', isEqualTo: true);
+
+    _remindersSubscription = query.snapshots().listen((snapshot) {
+      final Set<Marker> markers = {};
+      final Set<Circle> circles = {};
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final position = LatLng(data['latitude'], data['longitude']);
+        final radius = (data['triggerRadius'] as num).toDouble();
+
+        markers.add(
+          Marker(
             markerId: MarkerId(doc.id),
-            position: LatLng(data['latitude'], data['longitude']),
-            infoWindow: InfoWindow(title: data['name']),
-          );
-        }).toSet();
+            position: position,
+            infoWindow: InfoWindow(
+              title: data['name'] ?? 'Tanpa Judul',
+              snippet: 'Radius: $radius meter',
+            ),
+          ),
+        );
 
-    setState(() {
-      _reminderMarkers = markers;
+        circles.add(
+          Circle(
+            circleId: CircleId(doc.id),
+            center: position,
+            radius: radius,
+            fillColor: Colors.blue.withOpacity(0.2),
+            strokeColor: Colors.blue,
+            strokeWidth: 1,
+          ),
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _reminderMarkers = markers;
+          _reminderCircles = circles;
+        });
+      }
     });
   }
 
@@ -80,9 +107,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _currentPosition = LatLng(position.latitude, position.longitude);
-    });
+    if (mounted) {
+      setState(() {
+        _currentPosition = LatLng(position.latitude, position.longitude);
+      });
+    }
   }
 
   void _showAddReminderModal(LatLng position) {
@@ -176,8 +205,25 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 16,
                         ),
                       ),
-
                       onPressed: () async {
+                        final name = _titleController.text;
+                        final radius = double.tryParse(_radiusController.text);
+
+                        if (name.trim().isEmpty) {
+                          showErrorToast(
+                            context,
+                            'Judul pengingat tidak boleh kosong.',
+                          );
+                          return;
+                        }
+                        if (radius == null || radius <= 0) {
+                          showErrorToast(
+                            context,
+                            'Radius harus berupa angka positif.',
+                          );
+                          return;
+                        }
+
                         final user = FirebaseAuth.instance.currentUser;
                         if (user == null) return;
                         await FirebaseFirestore.instance
@@ -203,7 +249,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             context,
                             'Pengingat berhasil disimpan!',
                           );
-                          _loadReminders();
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -230,13 +275,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _debounce = Timer(const Duration(milliseconds: 400), () async {
       final input = _searchController.text;
       if (input.isEmpty) {
-        setState(() => _predictions = []);
+        if (mounted) {
+          setState(() => _predictions = []);
+        }
         return;
       }
       final result = await _places.findAutocompletePredictions(input);
-      setState(() {
-        _predictions = result.predictions;
-      });
+      if (mounted) {
+        setState(() {
+          _predictions = result.predictions;
+        });
+      }
     });
   }
 
@@ -285,6 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             markers: _reminderMarkers,
+            circles: _reminderCircles,
             onMapCreated: (controller) {
               _mapController = controller;
             },

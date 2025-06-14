@@ -8,8 +8,12 @@ import 'delete_reminder_dialog.dart';
 
 class ReminderCard extends StatelessWidget {
   final DocumentSnapshot reminderDoc;
-
-  const ReminderCard({super.key, required this.reminderDoc});
+  final VoidCallback onDelete;
+  const ReminderCard({
+    super.key,
+    required this.reminderDoc,
+    required this.onDelete,
+  });
 
   void _showEditReminderModal(BuildContext context, DocumentSnapshot doc) {
     showModalBottomSheet(
@@ -25,11 +29,12 @@ class ReminderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = reminderDoc.data() as Map<String, dynamic>;
-    final formattedDate = data['createdAt'] == null
-        ? 'N/A'
-        : DateFormat(
-            'd MMM y, HH:mm',
-          ).format((data['createdAt'] as Timestamp).toDate());
+    final formattedDate =
+        data['createdAt'] == null
+            ? 'N/A'
+            : DateFormat(
+              'd MMM y, HH:mm',
+            ).format((data['createdAt'] as Timestamp).toDate());
 
     return Card(
       elevation: 2.0,
@@ -37,10 +42,7 @@ class ReminderCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16.0),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: primaryColor.withOpacity(0.5),
-          width: 1,
-        ),
+        side: BorderSide(color: primaryColor.withOpacity(0.5), width: 1),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -125,7 +127,7 @@ class ReminderCard extends StatelessWidget {
                   Icons.delete_forever_outlined,
                   color: Colors.redAccent,
                 ),
-                onPressed: () => showDeleteReminderDialog(context, reminderDoc.id),
+                onPressed: onDelete,
               ),
             ],
           ),
