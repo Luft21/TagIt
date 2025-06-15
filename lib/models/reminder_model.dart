@@ -1,6 +1,7 @@
 class ReminderModel {
   final String userId;
   final String name;
+  final bool alarmActive;
   final double latitude;
   final double longitude;
   final double triggerRadius;
@@ -12,6 +13,7 @@ class ReminderModel {
   ReminderModel({
     required this.userId,
     required this.name,
+    required this.alarmActive,
     required this.latitude,
     required this.longitude,
     required this.triggerRadius,
@@ -21,14 +23,18 @@ class ReminderModel {
     required this.ttsEnabled,
   });
 
-  ReminderModel.fromMap(Map<String, dynamic> map)
-      : userId = map['userId'] ?? '',
-        name = map['name'] ?? '',
-        latitude = (map['latitude'] as num?)?.toDouble() ?? 0.0,
-        longitude = (map['longitude'] as num?)?.toDouble() ?? 0.0,
-        triggerRadius = (map['triggerRadius'] as num?)?.toDouble() ?? 100.0,
-        isActive = map['isActive'] ?? true,
-        ringtone = map['ringtone'] ?? 'Nada Dering Alarm Default', // Default value
-        vibrate = map['vibrate'] ?? true,
-        ttsEnabled = map['ttsEnabled'] ?? false;
+  factory ReminderModel.fromMap(Map<String, dynamic> map) {
+    return ReminderModel(
+      userId: map['userId'] ?? '',
+      name: map['name'] ?? '',
+      alarmActive: map['alarmActive'] ?? false,
+      latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
+      triggerRadius: (map['triggerRadius'] as num?)?.toDouble() ?? 100.0,
+      isActive: map['isActive'] ?? true,
+      ringtone: map['ringtone'] ?? 'Default Alarm Ringtone',
+      vibrate: map['vibrate'] ?? true,
+      ttsEnabled: map['ttsEnabled'] ?? false,
+    );
+  }
 }

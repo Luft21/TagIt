@@ -1,18 +1,16 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:vibration/vibration.dart';
 import 'package:tag_it/models/reminder_model.dart';
 import 'package:tag_it/utils/constants.dart';
 import 'package:tag_it/widgets/custom_toast.dart';
+import 'package:tag_it/services/alarm_service.dart';
+
 
 class EditReminderSheet extends StatefulWidget {
   final DocumentSnapshot reminderDoc;
@@ -32,8 +30,6 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
   List<String> _ringtones = [];
   bool _isLoadingRingtones = true;
 
-  final FlutterTts _flutterTts = FlutterTts();
-  final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _testTimer;
 
   static const String _customRingtoneOption = 'Pilih Nada Dering Kustom...';
@@ -57,13 +53,6 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
     _isActive = _reminder.isActive;
 
     _loadAvailableRingtones();
-    _setupTts();
-  }
-
-  void _setupTts() {
-    _flutterTts.setLanguage("id-ID");
-    _flutterTts.setSpeechRate(0.5);
-    _flutterTts.setPitch(1.0);
   }
 
   Future<void> _loadAvailableRingtones() async {
@@ -139,55 +128,33 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
   }
 
   Future<void> _stopTest() async {
-    await _flutterTts.stop();
-    await _audioPlayer.stop();
-    await FlutterRingtonePlayer().stop();
-    await Vibration.cancel();
+    await AlarmService().stopAlarm();
   }
 
   Future<void> _runTest() async {
     await _stopTest();
-    _testTimer?.cancel();
 
-    if (_vibrateOn) {
-      bool? hasVibrator = await Vibration.hasVibrator();
-      if (hasVibrator ?? false) {
-        Vibration.vibrate(pattern: [500, 1000, 500, 2000], repeat: 0);
-      }
-    }
-
+    String ringtoneToPlay = _selectedRingtone;
     if (_isTextToSpeechEnabled) {
-      String textToSay = _nameController.text.trim();
-      if (textToSay.isEmpty) {
-        textToSay = "Ini adalah contoh notifikasi text to speech.";
-      }
-      await _flutterTts.speak(textToSay);
-    } else {
-      switch (_selectedRingtone) {
-        case _defaultAlarmOption:
-          FlutterRingtonePlayer().playAlarm(looping: true);
-          break;
-        case _defaultNotificationOption:
-          FlutterRingtonePlayer().playNotification(looping: true);
-          break;
-        case _silentOption:
-          break;
-        default:
-          final ringtoneDir = await _getRingtoneDirectory();
-          final filePath = p.join(ringtoneDir.path, _selectedRingtone);
-          if (File(filePath).existsSync()) {
-            await _audioPlayer.play(DeviceFileSource(filePath));
-            await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-          } else {
-            showErrorToast(context, 'File nada dering tidak ditemukan.');
-          }
-      }
+      ringtoneToPlay = 'Hening';
+    } else if (_selectedRingtone != _defaultAlarmOption &&
+        _selectedRingtone != _defaultNotificationOption &&
+        _selectedRingtone != _silentOption) {
+      final ringtoneDir = await _getRingtoneDirectory();
+      ringtoneToPlay = p.join(ringtoneDir.path, _selectedRingtone);
     }
 
-    _testTimer = Timer(const Duration(seconds: 5), () {
-      _stopTest();
-      showSuccessToast(context, 'Uji coba selesai.');
-    });
+    await AlarmService().playAlarm(
+      name: _nameController.text.trim().isEmpty
+          ? "Ini adalah contoh notifikasi text to speech."
+          : _nameController.text.trim(),
+      ringtone: ringtoneToPlay,
+      vibrate: _vibrateOn,
+      ttsEnabled: _isTextToSpeechEnabled,
+      duration: const Duration(seconds: 5), // Uji coba hanya 5 detik
+    );
+
+    showSuccessToast(context, 'Uji coba selesai.');
   }
 
   Future<void> _saveChanges() async {
@@ -222,6 +189,7 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
           .update({
             'isActive': _isActive,
             'name': _nameController.text,
+            'alarmActive': false,
             'triggerRadius': double.tryParse(_radiusController.text) ?? 100.0,
             'vibrate': _vibrateOn,
             'ttsEnabled': _isTextToSpeechEnabled,

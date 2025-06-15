@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../utils/constants.dart';
 import 'edit_reminder_sheet.dart';
-import 'delete_reminder_dialog.dart';
 
 class ReminderCard extends StatelessWidget {
   final DocumentSnapshot reminderDoc;
