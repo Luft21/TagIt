@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -8,8 +9,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/custom_toast.dart';
+import '../screens/reminder/widgets/edit_reminder_sheet.dart';
 
 const kGoogleApiKey = 'AIzaSyDvbiq-Uwemy8QMtkLvtuheSxCqkq1xZ-U';
+const Color primaryColor = Color(0xFF4A90E2);
+const Color textColor = Color(0xFF2D3748);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<Marker> _reminderMarkers = {};
   Set<Circle> _reminderCircles = {};
   StreamSubscription<QuerySnapshot>? _remindersSubscription;
+  bool _showInstruction = true;
+  Timer? _instructionTimer;
 
   @override
   void initState() {
@@ -36,12 +42,21 @@ class _HomeScreenState extends State<HomeScreen> {
     _initLocation();
     _searchController.addListener(_onSearchChanged);
     _listenToReminders();
+
+    _instructionTimer = Timer(const Duration(seconds: 7), () {
+      if (mounted) {
+        setState(() {
+          _showInstruction = false;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _remindersSubscription?.cancel();
     _debounce?.cancel();
+    _instructionTimer?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _mapController?.dispose();
@@ -72,7 +87,10 @@ class _HomeScreenState extends State<HomeScreen> {
             position: position,
             infoWindow: InfoWindow(
               title: data['name'] ?? 'Tanpa Judul',
-              snippet: 'Radius: $radius meter',
+              snippet: 'Ketuk di sini untuk mengedit Pengingat',
+              onTap: () {
+                _showEditReminderModal(doc);
+              },
             ),
           ),
         );
@@ -169,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   TextFormField(
                     controller: _titleController,
                     style: GoogleFonts.lato(),
+                    autofocus: true,
                     decoration: InputDecoration(
                       labelText: 'Judul Pengingat',
                       labelStyle: GoogleFonts.poppins(),
@@ -230,15 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             .collection('reminders')
                             .add({
                               'userId': user.uid,
-                              'name':
-                                  _titleController.text.isNotEmpty
-                                      ? _titleController.text
-                                      : 'Pengingat Baru',
+                              'name': name,
                               'latitude': position.latitude,
                               'longitude': position.longitude,
-                              'triggerRadius':
-                                  double.tryParse(_radiusController.text) ??
-                                  100,
+                              'triggerRadius': radius,
                               'isActive': true,
                               'createdAt': FieldValue.serverTimestamp(),
                             });
@@ -270,6 +284,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showEditReminderModal(DocumentSnapshot doc) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return EditReminderSheet(reminderDoc: doc);
+      },
+    );
+  }
+
   void _onSearchChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () async {
@@ -293,7 +318,6 @@ class _HomeScreenState extends State<HomeScreen> {
     places_sdk.AutocompletePrediction prediction,
   ) async {
     final placeId = prediction.placeId;
-
     final details = await _places.fetchPlace(
       placeId,
       fields: [places_sdk.PlaceField.Location],
@@ -315,6 +339,61 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       _searchController.addListener(_onSearchChanged);
     }
+  }
+
+  Widget _buildInstructionOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !_showInstruction,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: _showInstruction ? 1.0 : 0.0,
+          child: Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.touch_app_outlined,
+                        color: textColor,
+                        size: 40,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Tekan Lama di Peta',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'untuk menambahkan pengingat baru.',
+                        style: GoogleFonts.lato(fontSize: 14, color: textColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -342,6 +421,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _showAddReminderModal(tappedPosition);
             },
           ),
+          _buildInstructionOverlay(),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),

@@ -51,6 +51,7 @@ dependencies:
   animate_do: ^4.2.0
   # flutter_local_notifications: ^19.2.1
   flutter_foreground_task: ^9.1.0
+  slide_to_act: ^2.0.2
 
 dev_dependencies:
   flutter_test:
