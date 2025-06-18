@@ -16,27 +16,31 @@ class AlarmService {
   final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _alarmTimer;
 
-  Future<void> stopAlarm({String? reminderId}) async {
-    await _flutterTts.stop();
-    await _audioPlayer.stop();
-    await FlutterRingtonePlayer().stop();
-    await Vibration.cancel();
+  void stopAlarm({String? reminderId}) async { // <-- Make the function async
+    print("---------- STOP ALARM INITIATED for $reminderId ----------");
+
+    // Await all asynchronous stop commands
+    await _flutterTts.stop().then((_) => print("LOG: TTS stop command sent."));
+    await _audioPlayer.stop().then((_) => print("LOG: AudioPlayer stop command sent."));
+    await FlutterRingtonePlayer().stop().then((_) => print("LOG: RingtonePlayer stop command sent."));
+    // Vibration.cancel() is synchronous, but placing it here is fine
+    Vibration.cancel();
+    print("LOG: Vibration cancel command sent.");
+
     _alarmTimer?.cancel();
+    print("LOG: Alarm timer cancelled.");
 
     if (reminderId != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('reminders')
-            .doc(reminderId)
-            .update({'isActive': false});
-        await FirebaseFirestore.instance
-            .collection('reminders')
-            .doc(reminderId)
-            .update({'alarmActive': false});
-      } catch (e) {
-        print("Error updating Firestore on alarm stop: $e");
-      }
+      await FirebaseFirestore.instance // <-- Await the Firestore update as well
+          .collection('reminders')
+          .doc(reminderId)
+          .update({'alarmActive': false, 'isActive': false}).then((_) {
+            print("LOG: Firestore updated: alarmActive for $reminderId is now false.");
+          }).catchError((e) {
+            print("ERROR: Firestore update failed for $reminderId: $e");
+          });
     }
+    print("---------- STOP ALARM FUNCTION ENDED ----------");
   }
 
   Future<void> playAlarm({
@@ -46,7 +50,6 @@ class AlarmService {
     required bool ttsEnabled,
     Duration? duration,
   }) async {
-    await stopAlarm();
 
     if (vibrate) {
       if (await Vibration.hasVibrator()) {
@@ -78,7 +81,7 @@ class AlarmService {
       }
     }
     
-    _alarmTimer = Timer(duration ?? const Duration(minutes: 2), () {
+    _alarmTimer = Timer(duration ?? const Duration(minutes: 1), () {
       stopAlarm();
     });
   }

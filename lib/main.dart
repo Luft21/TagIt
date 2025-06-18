@@ -28,7 +28,6 @@ void startCallback() {
 }
 
 class MyTaskHandler extends TaskHandler {
-  // Called when the task is started.
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     try {
@@ -42,24 +41,31 @@ class MyTaskHandler extends TaskHandler {
 
   @override
   Future<void> onRepeatEvent(DateTime timestamp) async {
-
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         return;
       }
-      final position = await Geolocator.getCurrentPosition();
+
       final snapshot = await FirebaseFirestore.instance
           .collection('reminders')
           .where('userId', isEqualTo: user.uid)
           .where('isActive', isEqualTo: true)
           .get();
 
+      if (snapshot.docs.isEmpty) {
+        AlarmService().stopAlarm();
+        return;
+      }
+
+      Position? position = await Geolocator.getLastKnownPosition();
+      if (position == null || DateTime.now().difference(position.timestamp) > Duration(minutes: 2)) {
+        position = await Geolocator.getCurrentPosition();
+      }
 
       for (var doc in snapshot.docs) {
-        final docData = doc.data(); 
-        final reminder = ReminderModel.fromMap(docData); 
-
+        final docData = doc.data();
+        final reminder = ReminderModel.fromMap(docData);
 
         final distance = Geolocator.distanceBetween(
           position.latitude,
@@ -78,7 +84,6 @@ class MyTaskHandler extends TaskHandler {
             ringtone: reminder.ringtone,
             vibrate: reminder.vibrate,
             ttsEnabled: reminder.ttsEnabled,
-            duration: const Duration(minutes: 1),
           );
 
           await FlutterForegroundTask.updateService(

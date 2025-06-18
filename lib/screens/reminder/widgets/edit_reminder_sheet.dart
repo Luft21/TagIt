@@ -128,7 +128,7 @@ class _EditReminderSheetState extends State<EditReminderSheet> {
   }
 
   Future<void> _stopTest() async {
-    await AlarmService().stopAlarm();
+    AlarmService().stopAlarm();
   }
 
   Future<void> _runTest() async {
