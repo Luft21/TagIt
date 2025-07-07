@@ -1,6 +1,6 @@
 # 📍 TagIt - Aplikasi Pengingat Lokasi (Vibrasi & Alarm)
 
-![Logo](https://socialify.git.ci/Luft21/TagIt/image?custom_language=Flutter&font=Inter&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2FLuft21%2FTagIt%2Fd56bf1996de60fa0d61748317aa30cd4cab15257%2Fassets%2Fimages%2Ftagit_logo.png&name=1&owner=1&theme=Auto)
+![Logo](https://socialify.git.ci/Luft21/TagIt/image?custom_language=Flutter&font=Inter&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2FLuft21%2FTagIt%2Fd56bf1996de60fa0d61748317aa30cd4cab15257%2Fassets%2Fimages%2Ftagit_logo.png&name=1&theme=Auto)
 
 
 ## Description
@@ -11,13 +11,18 @@ Aplikasi ini cocok untuk pengguna yang ingin mendapatkan pengingat lokasi saat b
 
 ## Screenshots
 
-![Login Screen](screenshot/login_screen.png)
-![Map](screenshot/map.png)
-![Add Reminder](screenshot/add_reminder.png)
-![Reminder List](screenshot/reminder_list.png)
-![Edit Reminder](screenshot/edit_reminder.png)
-![Profile](screenshot/profile.png)
-
+<table>
+  <tr>
+    <td><img src="screenshot/login_screen.png" width="180" alt="Login Screen"/></td>
+    <td><img src="screenshot/map.png" width="180" alt="Map"/></td>
+    <td><img src="screenshot/add_reminder.png" width="180" alt="Add Reminder"/></td>
+  </tr>
+  <tr>
+    <td><img src="screenshot/reminder_list.png" width="180" alt="Reminder List"/></td>
+    <td><img src="screenshot/edit_reminder.png" width="180" alt="Edit Reminder"/></td>
+    <td><img src="screenshot/profile.png" width="180" alt="Profile"/></td>
+  </tr>
+</table>
 
 ## Features
 
