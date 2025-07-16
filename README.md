@@ -40,3 +40,6 @@ Aplikasi ini cocok untuk pengguna yang ingin mendapatkan pengingat lokasi saat b
 - geolocator
 - flutter_local_notifications
 - vibration
+
+## Figma Design
+https://www.figma.com/design/FVX2sUgMHuUFzbg0W6aADb/Aplikasi-Tag-It?node-id=0-1&t=SaYMleqfs7WAiuvF-1
